@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# personal/local-only SQL scripts (may contain real emails/data)
+*.local.sql
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

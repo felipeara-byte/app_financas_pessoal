@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,11 @@ export function TransactionsClient({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/transactions/import">Importar extrato</Link>}
+          />
           <ExportCsvButton transactions={transactions} />
           <Button onClick={openCreateDialog}>Nova transação</Button>
         </div>
@@ -178,7 +184,7 @@ export function TransactionsClient({
                       className={`text-right whitespace-nowrap ${
                         transaction.type === "income"
                           ? "text-success"
-                          : "text-foreground"
+                          : "text-destructive"
                       }`}
                     >
                       {transaction.type === "income" ? "+" : "-"}
