@@ -42,4 +42,8 @@ Com `.env.local` preenchido, rode:
 npm run dev
 ```
 
-O app deve iniciar sem erros. As telas de login/cadastro (implementadas na próxima etapa) usarão essas credenciais para autenticar via Supabase Auth, e cada usuário só verá suas próprias transações graças às políticas de Row Level Security definidas na migration.
+Abra [http://localhost:3000](http://localhost:3000), crie uma conta em `/signup` e faça login. Cada usuário só verá suas próprias transações graças às políticas de Row Level Security definidas na migration.
+
+## 6. (Opcional) Popular dados de exemplo
+
+Depois de criar sua conta, edite o e-mail no topo de `supabase/seed.sql` para o e-mail que você usou no cadastro, cole o conteúdo no SQL Editor e rode. Isso cria algumas transações de exemplo no mês atual, úteis para testar o dashboard e os filtros rapidamente.
