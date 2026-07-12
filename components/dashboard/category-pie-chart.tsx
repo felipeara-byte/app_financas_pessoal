@@ -3,7 +3,6 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
-import { EXPENSE_CATEGORY_COLORS } from "@/lib/constants/category-colors";
 import type { Category } from "@/lib/constants/categories";
 
 export interface CategoryBreakdownItem {
@@ -15,10 +14,6 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
-
-function categoryColor(category: Category) {
-  return EXPENSE_CATEGORY_COLORS[category] ?? "var(--muted-foreground)";
-}
 
 function ChartTooltip({ active, payload }: TooltipContentProps<ValueType, NameType>) {
   if (!active || !payload?.length) return null;
@@ -33,15 +28,23 @@ function ChartTooltip({ active, payload }: TooltipContentProps<ValueType, NameTy
   );
 }
 
-export function CategoryPieChart({ data }: { data: CategoryBreakdownItem[] }) {
+export function CategoryPieChart({
+  data,
+  colors,
+  emptyMessage = "Nenhum dado registrado neste período.",
+}: {
+  data: CategoryBreakdownItem[];
+  colors: Partial<Record<Category, string>>;
+  emptyMessage?: string;
+}) {
   const total = data.reduce((sum, entry) => sum + entry.total, 0);
 
+  function categoryColor(category: Category) {
+    return colors[category] ?? "var(--muted-foreground)";
+  }
+
   if (data.length === 0 || total === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Nenhuma despesa registrada neste período.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   return (

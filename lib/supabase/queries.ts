@@ -5,6 +5,9 @@ import type { Transaction } from "@/lib/types";
 export interface TransactionFilters {
   month?: number;
   year?: number;
+  /** Inclusive range filter (YYYY-MM-DD). Takes precedence over month/year. */
+  dateFrom?: string;
+  dateTo?: string;
   category?: Category;
   search?: string;
 }
@@ -29,7 +32,10 @@ export async function getFilteredTransactions(
     .order("transaction_date", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (filters.month && filters.year) {
+  if (filters.dateFrom || filters.dateTo) {
+    if (filters.dateFrom) query = query.gte("transaction_date", filters.dateFrom);
+    if (filters.dateTo) query = query.lte("transaction_date", filters.dateTo);
+  } else if (filters.month && filters.year) {
     const { start, end } = monthRange(filters.month, filters.year);
     query = query.gte("transaction_date", start).lt("transaction_date", end);
   }

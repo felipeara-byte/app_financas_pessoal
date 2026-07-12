@@ -7,18 +7,37 @@ import {
   CategoryPieChart,
   type CategoryBreakdownItem,
 } from "@/components/dashboard/category-pie-chart";
+import { MonthlyBarChart, type MonthlyTotal } from "@/components/dashboard/monthly-bar-chart";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import type { Category } from "@/lib/constants/categories";
-import { ALL_MONTHS_VALUE } from "@/lib/constants/filters";
-
-const MONTH_YEAR_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
+import { buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
+import {
+  EXPENSE_CATEGORY_COLORS,
+  INCOME_CATEGORY_COLORS,
+} from "@/lib/constants/category-colors";
+import type { Transaction } from "@/lib/types";
 
 interface DashboardPageProps {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{
+    from_month?: string;
+    from_year?: string;
+    to_month?: string;
+    to_year?: string;
+  }>;
+}
+
+function categoryBreakdown(
+  transactions: Transaction[],
+  type: "income" | "expense"
+): CategoryBreakdownItem[] {
+  const totals = new Map<Category, number>();
+  for (const t of transactions) {
+    if (t.type !== type) continue;
+    totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
+  }
+  return Array.from(totals, ([category, total]) => ({ category, total })).sort(
+    (a, b) => b.total - a.total
+  );
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -33,16 +52,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const params = await searchParams;
   const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
 
-  const monthParam = params.month ?? String(now.getMonth() + 1);
-  const yearParam = params.year ?? String(now.getFullYear());
-  const isAllPeriods = monthParam === ALL_MONTHS_VALUE;
-  const month = isAllPeriods ? undefined : Number(monthParam);
-  const year = isAllPeriods ? undefined : Number(yearParam);
+  const fromMonth = Number(params.from_month ?? currentMonth);
+  const fromYear = Number(params.from_year ?? currentYear);
+  const toMonth = Number(params.to_month ?? currentMonth);
+  const toYear = Number(params.to_year ?? currentYear);
+
+  const { dateFrom, dateTo } = buildMonthRange(fromMonth, fromYear, toMonth, toYear);
 
   const transactions = await getFilteredTransactions(supabase, user.id, {
-    month,
-    year,
+    dateFrom,
+    dateTo,
   });
 
   const totalIncome = transactions
@@ -53,44 +75,81 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const expenseByCategory = new Map<Category, number>();
-  for (const t of transactions) {
-    if (t.type !== "expense") continue;
-    expenseByCategory.set(
-      t.category,
-      (expenseByCategory.get(t.category) ?? 0) + t.amount
-    );
-  }
-  const categoryBreakdown: CategoryBreakdownItem[] = Array.from(
-    expenseByCategory,
-    ([category, total]) => ({ category, total })
-  ).sort((a, b) => b.total - a.total);
+  const expenseBreakdown = categoryBreakdown(transactions, "expense");
+  const incomeBreakdown = categoryBreakdown(transactions, "income");
 
-  let periodLabel = "Todos os períodos";
-  if (!isAllPeriods) {
-    const rawMonthLabel = MONTH_YEAR_FORMATTER.format(
-      new Date(Date.UTC(Number(yearParam), Number(monthParam) - 1, 1))
+  // Month-by-month chart always covers the current calendar year, independent
+  // of the period filter above -- it's meant as a stable year-at-a-glance view.
+  const yearTransactions = await getFilteredTransactions(supabase, user.id, {
+    dateFrom: `${currentYear}-01-01`,
+    dateTo: `${currentYear}-12-31`,
+  });
+
+  const monthlyTotals: MonthlyTotal[] = MONTH_OPTIONS.map((month) => {
+    const monthNumber = Number(month.value);
+    const monthTransactions = yearTransactions.filter(
+      (t) => Number(t.transaction_date.slice(5, 7)) === monthNumber
     );
-    periodLabel = rawMonthLabel.charAt(0).toUpperCase() + rawMonthLabel.slice(1);
-  }
+    return {
+      month: month.label.slice(0, 3),
+      income: monthTransactions
+        .filter((t) => t.type === "income")
+        .reduce((sum, t) => sum + t.amount, 0),
+      expense: monthTransactions
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + t.amount, 0),
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">{periodLabel}</p>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      <PeriodFilterBar filters={{ month: monthParam, year: yearParam }} />
+      <PeriodFilterBar
+        filters={{
+          fromMonth: String(fromMonth),
+          fromYear: String(fromYear),
+          toMonth: String(toMonth),
+          toYear: String(toYear),
+        }}
+      />
 
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Despesas por categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoryPieChart
+              data={expenseBreakdown}
+              colors={EXPENSE_CATEGORY_COLORS}
+              emptyMessage="Nenhuma despesa registrada neste período."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Receitas por categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoryPieChart
+              data={incomeBreakdown}
+              colors={INCOME_CATEGORY_COLORS}
+              emptyMessage="Nenhuma receita registrada neste período."
+            />
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Despesas por categoria</CardTitle>
+          <CardTitle>Receitas e despesas por mês — {currentYear}</CardTitle>
         </CardHeader>
         <CardContent>
-          <CategoryPieChart data={categoryBreakdown} />
+          <MonthlyBarChart data={monthlyTotals} />
         </CardContent>
       </Card>
     </div>

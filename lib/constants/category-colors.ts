@@ -11,3 +11,14 @@ export const EXPENSE_CATEGORY_COLORS: Partial<Record<Category, string>> = {
   Educação: "var(--chart-6)",
   Outros: "var(--chart-7)",
 };
+
+// Income only ever shows a handful of categories (Salário/Freelance/Outros),
+// so this reuses the same validated palette from a different subset of
+// slots -- it's never rendered in the same legend as the expense chart,
+// except "Outros", which is kept on the same slot (chart-7) in both so the
+// one category shared between the two charts stays visually consistent.
+export const INCOME_CATEGORY_COLORS: Partial<Record<Category, string>> = {
+  Salário: "var(--chart-8)",
+  Freelance: "var(--chart-1)",
+  Outros: "var(--chart-7)",
+};

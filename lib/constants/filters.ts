@@ -23,3 +23,24 @@ export function getYearOptions(currentYear: number, span = 3): string[] {
   }
   return years;
 }
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+export function lastDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+/** Builds an inclusive YYYY-MM-DD date range spanning from the first day of
+ * `fromMonth`/`fromYear` through the last day of `toMonth`/`toYear`. */
+export function buildMonthRange(
+  fromMonth: number,
+  fromYear: number,
+  toMonth: number,
+  toYear: number
+): { dateFrom: string; dateTo: string } {
+  const dateFrom = `${fromYear}-${pad(fromMonth)}-01`;
+  const dateTo = `${toYear}-${pad(toMonth)}-${pad(lastDayOfMonth(toYear, toMonth))}`;
+  return { dateFrom, dateTo };
+}
