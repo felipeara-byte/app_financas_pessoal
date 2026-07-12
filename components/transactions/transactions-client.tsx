@@ -1,8 +1,35 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants/categories";
 import type { Transaction } from "@/lib/types";
 import { deleteTransaction } from "@/app/(dashboard)/transactions/actions";
@@ -20,35 +47,91 @@ export function TransactionsClient({
 }: {
   transactions: Transaction[];
 }) {
+  const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleDelete(id: string) {
-    if (!confirm("Excluir esta transação?")) return;
-    startTransition(() => {
-      deleteTransaction(id);
+  function openCreateDialog() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+
+  function openEditDialog(transaction: Transaction) {
+    setEditing(transaction);
+    setFormOpen(true);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    startTransition(async () => {
+      await deleteTransaction(id);
+      toast.success("Transação excluída.");
     });
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {editing ? "Editar transação" : "Nova transação"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
+        <Button onClick={openCreateDialog}>Nova transação</Button>
+      </div>
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Editar transação" : "Nova transação"}
+            </DialogTitle>
+            <DialogDescription>
+              {editing
+                ? "Atualize os dados da transação."
+                : "Preencha os dados da receita ou despesa."}
+            </DialogDescription>
+          </DialogHeader>
           <TransactionForm
             transaction={editing}
-            onDone={() => setEditing(null)}
+            onDone={() => setFormOpen(false)}
+            onCancel={() => setFormOpen(false)}
           />
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir transação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  Esta ação não pode ser desfeita. A transação &ldquo;
+                  {deleteTarget.description}&rdquo; será excluída
+                  permanentemente.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={confirmDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader>
-          <CardTitle>Transações</CardTitle>
+          <CardTitle>Todas as transações</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
@@ -56,63 +139,62 @@ export function TransactionsClient({
               Nenhuma transação cadastrada ainda.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Data</th>
-                    <th className="py-2 pr-4 font-medium">Descrição</th>
-                    <th className="py-2 pr-4 font-medium">Categoria</th>
-                    <th className="py-2 pr-4 font-medium">Tipo</th>
-                    <th className="py-2 pr-4 text-right font-medium">Valor</th>
-                    <th className="py-2 pr-0 text-right font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4 whitespace-nowrap">
-                        {dateFormatter.format(
-                          new Date(`${transaction.transaction_date}T00:00:00Z`)
-                        )}
-                      </td>
-                      <td className="py-2 pr-4">{transaction.description}</td>
-                      <td className="py-2 pr-4">{transaction.category}</td>
-                      <td className="py-2 pr-4">
-                        {TRANSACTION_TYPE_LABELS[transaction.type]}
-                      </td>
-                      <td
-                        className={`py-2 pr-4 text-right whitespace-nowrap ${
-                          transaction.type === "income"
-                            ? "text-success"
-                            : "text-foreground"
-                        }`}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {dateFormatter.format(
+                        new Date(`${transaction.transaction_date}T00:00:00Z`)
+                      )}
+                    </TableCell>
+                    <TableCell>{transaction.description}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{transaction.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {TRANSACTION_TYPE_LABELS[transaction.type]}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right whitespace-nowrap ${
+                        transaction.type === "income"
+                          ? "text-success"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {transaction.type === "income" ? "+" : "-"}
+                      {currencyFormatter.format(transaction.amount)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(transaction)}
                       >
-                        {transaction.type === "income" ? "+" : "-"}
-                        {currencyFormatter.format(transaction.amount)}
-                      </td>
-                      <td className="py-2 pr-0 text-right whitespace-nowrap">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditing(transaction)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() => handleDelete(transaction.id)}
-                        >
-                          Excluir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteTarget(transaction)}
+                      >
+                        Excluir
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

@@ -2,11 +2,20 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CATEGORIES,
+  CATEGORY_ITEMS,
   TRANSACTION_TYPES,
   TRANSACTION_TYPE_LABELS,
 } from "@/lib/constants/categories";
@@ -31,9 +40,11 @@ function SubmitButton({ label }: { label: string }) {
 export function TransactionForm({
   transaction,
   onDone,
+  onCancel,
 }: {
   transaction?: Transaction | null;
   onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const action = transaction
     ? updateTransaction.bind(null, transaction.id)
@@ -43,12 +54,21 @@ export function TransactionForm({
   const lastHandledState = useRef(state);
 
   useEffect(() => {
-    if (state !== lastHandledState.current && state.error === null) {
-      formRef.current?.reset();
-      onDone?.();
-    }
+    if (state === lastHandledState.current) return;
     lastHandledState.current = state;
-  }, [state, onDone]);
+
+    if (state.error) {
+      toast.error(state.error);
+      return;
+    }
+
+    toast.success(
+      transaction ? "Transação atualizada." : "Transação adicionada."
+    );
+    formRef.current?.reset();
+    onDone?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-4">
@@ -88,42 +108,49 @@ export function TransactionForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="type">Tipo</Label>
-          <select
-            id="type"
+          <Select
             name="type"
+            items={TRANSACTION_TYPE_LABELS}
             defaultValue={transaction?.type ?? "expense"}
             required
-            className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm"
           >
-            {TRANSACTION_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {TRANSACTION_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="type" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TRANSACTION_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {TRANSACTION_TYPE_LABELS[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="category">Categoria</Label>
-          <select
-            id="category"
+          <Select
             name="category"
+            items={CATEGORY_ITEMS}
             defaultValue={transaction?.category ?? CATEGORIES[0]}
             required
-            className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm"
           >
-            {CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="category" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       <div className="flex gap-2">
         <SubmitButton label={transaction ? "Salvar alterações" : "Adicionar"} />
-        {transaction && onDone && (
-          <Button type="button" variant="outline" onClick={onDone}>
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
         )}
