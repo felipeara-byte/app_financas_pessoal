@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export type SignupState = { error: string | null; success: boolean };
@@ -23,12 +24,13 @@ export async function signup(
     };
   }
 
+  const origin = (await headers()).get("origin");
   const supabase = await createClient();
   const { error, data } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback`,
     },
   });
 
