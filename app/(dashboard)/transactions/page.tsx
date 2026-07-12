@@ -29,7 +29,7 @@ export default async function TransactionsPage({
   const params = await searchParams;
   const now = new Date();
 
-  const monthParam = params.month ?? String(now.getMonth() + 1);
+  const monthParam = params.month ?? ALL_MONTHS_VALUE;
   const yearParam = params.year ?? String(now.getFullYear());
   const categoryParam = params.category ?? ALL_CATEGORIES_VALUE;
   const searchParam = params.search ?? "";
