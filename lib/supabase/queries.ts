@@ -56,3 +56,38 @@ export async function getFilteredTransactions(
 
   return data ?? [];
 }
+
+/** Earliest and latest transaction_date years for this user, or null if
+ * they have no transactions yet. Used to scope year-picker options to
+ * years that actually have data instead of an arbitrary fixed range. */
+export async function getTransactionYearRange(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ minYear: number; maxYear: number } | null> {
+  const [earliest, latest] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("transaction_date")
+      .eq("user_id", userId)
+      .order("transaction_date", { ascending: true })
+      .limit(1),
+    supabase
+      .from("transactions")
+      .select("transaction_date")
+      .eq("user_id", userId)
+      .order("transaction_date", { ascending: false })
+      .limit(1),
+  ]);
+
+  if (earliest.error) throw earliest.error;
+  if (latest.error) throw latest.error;
+
+  if (!earliest.data?.length || !latest.data?.length) {
+    return null;
+  }
+
+  return {
+    minYear: Number(earliest.data[0].transaction_date.slice(0, 4)),
+    maxYear: Number(latest.data[0].transaction_date.slice(0, 4)),
+  };
+}

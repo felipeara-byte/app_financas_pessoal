@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { MONTH_OPTIONS, getYearOptions } from "@/lib/constants/filters";
+import { MONTH_OPTIONS } from "@/lib/constants/filters";
 
 export interface PeriodFilterValue {
   fromMonth: string;
@@ -21,11 +21,16 @@ export interface PeriodFilterValue {
 
 const MONTH_ITEMS = Object.fromEntries(MONTH_OPTIONS.map((m) => [m.value, m.label]));
 
-export function PeriodFilterBar({ filters }: { filters: PeriodFilterValue }) {
+export function PeriodFilterBar({
+  filters,
+  yearOptions,
+}: {
+  filters: PeriodFilterValue;
+  yearOptions: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const yearOptions = getYearOptions(new Date().getFullYear());
   const yearItems = Object.fromEntries(yearOptions.map((y) => [y, y]));
 
   function updateParams(next: Partial<PeriodFilterValue>) {

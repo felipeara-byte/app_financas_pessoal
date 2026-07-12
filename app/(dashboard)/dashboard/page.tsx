@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getFilteredTransactions } from "@/lib/supabase/queries";
+import { getFilteredTransactions, getTransactionYearRange } from "@/lib/supabase/queries";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { PeriodFilterBar } from "@/components/dashboard/period-filter-bar";
 import {
@@ -55,12 +55,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const fromMonth = Number(params.from_month ?? currentMonth);
+  const fromMonth = Number(params.from_month ?? 1);
   const fromYear = Number(params.from_year ?? currentYear);
   const toMonth = Number(params.to_month ?? currentMonth);
   const toYear = Number(params.to_year ?? currentYear);
 
   const { dateFrom, dateTo } = buildMonthRange(fromMonth, fromYear, toMonth, toYear);
+
+  const yearRange = await getTransactionYearRange(supabase, user.id);
+  const minYear = Math.min(yearRange?.minYear ?? currentYear, currentYear);
+  const maxYear = Math.max(yearRange?.maxYear ?? currentYear, currentYear);
+  const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) =>
+    String(minYear + i)
+  );
 
   const transactions = await getFilteredTransactions(supabase, user.id, {
     dateFrom,
@@ -112,6 +119,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           toMonth: String(toMonth),
           toYear: String(toYear),
         }}
+        yearOptions={yearOptions}
       />
 
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
