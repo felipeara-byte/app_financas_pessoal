@@ -35,6 +35,7 @@ import type { Transaction } from "@/lib/types";
 import { deleteTransaction } from "@/app/(dashboard)/transactions/actions";
 import { TransactionForm } from "./transaction-form";
 import { FilterBar, type TransactionFiltersValue } from "./filter-bar";
+import { ExportCsvButton } from "./export-csv-button";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -77,9 +78,12 @@ export function TransactionsClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
-        <Button onClick={openCreateDialog}>Nova transação</Button>
+        <div className="flex items-center gap-2">
+          <ExportCsvButton transactions={transactions} />
+          <Button onClick={openCreateDialog}>Nova transação</Button>
+        </div>
       </div>
 
       <FilterBar filters={filters} />
