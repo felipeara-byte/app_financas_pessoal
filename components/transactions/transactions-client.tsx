@@ -34,6 +34,7 @@ import { TRANSACTION_TYPE_LABELS } from "@/lib/constants/categories";
 import type { Transaction } from "@/lib/types";
 import { deleteTransaction } from "@/app/(dashboard)/transactions/actions";
 import { TransactionForm } from "./transaction-form";
+import { FilterBar, type TransactionFiltersValue } from "./filter-bar";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -44,8 +45,10 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 export function TransactionsClient({
   transactions,
+  filters,
 }: {
   transactions: Transaction[];
+  filters: TransactionFiltersValue;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -78,6 +81,8 @@ export function TransactionsClient({
         <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
         <Button onClick={openCreateDialog}>Nova transação</Button>
       </div>
+
+      <FilterBar filters={filters} />
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-lg">
