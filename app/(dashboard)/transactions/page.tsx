@@ -1,22 +1,24 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getFilteredTransactions } from "@/lib/supabase/queries";
+import { TransactionsClient } from "@/components/transactions/transactions-client";
 
-export default function TransactionsPage() {
+export default async function TransactionsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const transactions = await getFilteredTransactions(supabase, user.id, {});
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Em construção</CardTitle>
-          <CardDescription>
-            O CRUD de transações chega na próxima etapa.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <TransactionsClient transactions={transactions} />
     </div>
   );
 }
