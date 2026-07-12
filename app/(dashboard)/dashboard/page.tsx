@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getFilteredTransactions, getTransactionYearRange } from "@/lib/supabase/queries";
+import { getFilteredTransactions } from "@/lib/supabase/queries";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { PeriodFilterBar } from "@/components/dashboard/period-filter-bar";
 import {
@@ -8,6 +8,8 @@ import {
   type CategoryBreakdownItem,
 } from "@/components/dashboard/category-pie-chart";
 import { MonthlyBarChart, type MonthlyTotal } from "@/components/dashboard/monthly-bar-chart";
+import { TopTransactionsCard } from "@/components/dashboard/top-transactions-card";
+import { FixedVariableCard } from "@/components/dashboard/fixed-variable-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import type { Category } from "@/lib/constants/categories";
 import { buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
@@ -16,6 +18,7 @@ import {
   INCOME_CATEGORY_COLORS,
 } from "@/lib/constants/category-colors";
 import type { Transaction } from "@/lib/types";
+import { detectRecurringDescriptions, getPreviousPeriod, isRecurringExpense } from "@/lib/dashboard/insights";
 
 interface DashboardPageProps {
   searchParams: Promise<{
@@ -40,6 +43,12 @@ function categoryBreakdown(
   );
 }
 
+function inRange(transactions: Transaction[], dateFrom: string, dateTo: string): Transaction[] {
+  return transactions.filter(
+    (t) => t.transaction_date >= dateFrom && t.transaction_date <= dateTo
+  );
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const supabase = await createClient();
   const {
@@ -61,36 +70,58 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const toYear = Number(params.to_year ?? currentYear);
 
   const { dateFrom, dateTo } = buildMonthRange(fromMonth, fromYear, toMonth, toYear);
-
-  const yearRange = await getTransactionYearRange(supabase, user.id);
-  const minYear = Math.min(yearRange?.minYear ?? currentYear, currentYear);
-  const maxYear = Math.max(yearRange?.maxYear ?? currentYear, currentYear);
-  const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) =>
-    String(minYear + i)
+  const previous = getPreviousPeriod(fromMonth, fromYear, toMonth, toYear);
+  const previousRange = buildMonthRange(
+    previous.fromMonth,
+    previous.fromYear,
+    previous.toMonth,
+    previous.toYear
   );
 
-  const transactions = await getFilteredTransactions(supabase, user.id, {
-    dateFrom,
-    dateTo,
-  });
+  // Personal-finance data volume is small enough to fetch once and derive
+  // every view (period, previous period, year chart, recurring detection)
+  // in memory instead of round-tripping to the database per computation.
+  const allTransactions = await getFilteredTransactions(supabase, user.id, {});
+
+  const transactions = inRange(allTransactions, dateFrom, dateTo);
+  const previousTransactions = inRange(
+    allTransactions,
+    previousRange.dateFrom,
+    previousRange.dateTo
+  );
+  const yearTransactions = allTransactions.filter((t) =>
+    t.transaction_date.startsWith(String(currentYear))
+  );
+
+  const years = Array.from(
+    new Set(allTransactions.map((t) => t.transaction_date.slice(0, 4)))
+  );
+  if (!years.includes(String(currentYear))) years.push(String(currentYear));
+  const yearOptions = years.sort();
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
-
   const totalExpense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const previousIncome = previousTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const previousExpense = previousTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const expenseBreakdown = categoryBreakdown(transactions, "expense");
   const incomeBreakdown = categoryBreakdown(transactions, "income");
 
-  // Month-by-month chart always covers the current calendar year, independent
-  // of the period filter above -- it's meant as a stable year-at-a-glance view.
-  const yearTransactions = await getFilteredTransactions(supabase, user.id, {
-    dateFrom: `${currentYear}-01-01`,
-    dateTo: `${currentYear}-12-31`,
-  });
+  const recurringDescriptions = detectRecurringDescriptions(allTransactions);
+  const expenseTransactions = transactions.filter((t) => t.type === "expense");
+  const fixedTotal = expenseTransactions
+    .filter((t) => isRecurringExpense(t, recurringDescriptions))
+    .reduce((sum, t) => sum + t.amount, 0);
+  const variableTotal = totalExpense - fixedTotal;
 
   const monthlyTotals: MonthlyTotal[] = MONTH_OPTIONS.map((month) => {
     const monthNumber = Number(month.value);
@@ -122,7 +153,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         yearOptions={yearOptions}
       />
 
-      <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
+      <SummaryCards
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
+        previousIncome={previousIncome}
+        previousExpense={previousExpense}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -150,6 +186,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             />
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TopTransactionsCard transactions={transactions} />
+        <FixedVariableCard fixedTotal={fixedTotal} variableTotal={variableTotal} />
       </div>
 
       <Card>

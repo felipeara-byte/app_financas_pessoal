@@ -2,8 +2,9 @@
 
 import {
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -31,6 +32,12 @@ const compactCurrencyFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 1,
 });
 
+const SERIES_LABELS: Record<string, string> = {
+  income: "Receita",
+  expense: "Despesa",
+  cumulative: "Saldo acumulado",
+};
+
 function ChartTooltip({ active, payload, label }: TooltipContentProps<ValueType, NameType>) {
   if (!active || !payload?.length) return null;
   return (
@@ -42,7 +49,7 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps<ValueType,
             className="size-2 shrink-0 rounded-full"
             style={{ backgroundColor: entry.color }}
           />
-          {entry.name === "income" ? "Receita" : "Despesa"}:{" "}
+          {SERIES_LABELS[String(entry.name)] ?? entry.name}:{" "}
           <span className="font-medium text-foreground">
             {currencyFormatter.format(Math.abs(Number(entry.value ?? 0)))}
           </span>
@@ -63,10 +70,13 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
     );
   }
 
-  const chartData = data.map((d) => ({
+  const chartData = data.map((d, index) => ({
     month: d.month,
     income: d.income,
     expense: -d.expense,
+    cumulative: data
+      .slice(0, index + 1)
+      .reduce((sum, m) => sum + m.income - m.expense, 0),
   }));
 
   return (
@@ -80,10 +90,14 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
           <span className="size-2.5 rounded-full bg-destructive" />
           Despesa
         </span>
+        <span className="flex items-center gap-2">
+          <span className="size-2.5 rounded-full bg-primary" />
+          Saldo acumulado
+        </span>
       </div>
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} barGap={2} barCategoryGap="20%">
+          <ComposedChart data={chartData} barGap={2} barCategoryGap="20%">
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="month"
@@ -92,16 +106,46 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
               tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
             />
             <YAxis
+              yAxisId="left"
               tickLine={false}
               axisLine={false}
               tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
               tickFormatter={(value) => compactCurrencyFormatter.format(Math.abs(value))}
             />
-            <ReferenceLine y={0} stroke="var(--border)" />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+              tickFormatter={(value) => compactCurrencyFormatter.format(value)}
+            />
+            <ReferenceLine yAxisId="left" y={0} stroke="var(--border)" />
             <Tooltip content={ChartTooltip} cursor={{ fill: "var(--muted)", opacity: 0.4 }} />
-            <Bar dataKey="income" name="income" fill="var(--success)" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="expense" name="expense" fill="var(--destructive)" radius={[0, 0, 3, 3]} />
-          </BarChart>
+            <Bar
+              yAxisId="left"
+              dataKey="income"
+              name="income"
+              fill="var(--success)"
+              radius={[3, 3, 0, 0]}
+            />
+            <Bar
+              yAxisId="left"
+              dataKey="expense"
+              name="expense"
+              fill="var(--destructive)"
+              radius={[0, 0, 3, 3]}
+            />
+            <Line
+              yAxisId="right"
+              dataKey="cumulative"
+              name="cumulative"
+              type="monotone"
+              stroke="var(--primary)"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "var(--primary)" }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
