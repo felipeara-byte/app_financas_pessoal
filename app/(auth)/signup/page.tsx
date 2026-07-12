@@ -40,7 +40,11 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" render={<Link href="/login">Ir para o login</Link>} />
+          <Button
+            className="w-full"
+            nativeButton={false}
+            render={<Link href="/login">Ir para o login</Link>}
+          />
         </CardContent>
       </Card>
     );

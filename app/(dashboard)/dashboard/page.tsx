@@ -55,13 +55,17 @@ export default async function DashboardPage() {
     ([category, total]) => ({ category, total })
   ).sort((a, b) => b.total - a.total);
 
-  const monthLabel = MONTH_YEAR_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
+  const rawMonthLabel = MONTH_YEAR_FORMATTER.format(
+    new Date(Date.UTC(year, month - 1, 1))
+  );
+  const monthLabel =
+    rawMonthLabel.charAt(0).toUpperCase() + rawMonthLabel.slice(1);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground capitalize">{monthLabel}</p>
+        <p className="text-sm text-muted-foreground">{monthLabel}</p>
       </div>
 
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />

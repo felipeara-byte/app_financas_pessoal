@@ -40,9 +40,10 @@ export default async function DashboardLayout({
                 key={link.href}
                 variant="ghost"
                 size="sm"
+                className="gap-1.5"
                 nativeButton={false}
                 render={
-                  <Link href={link.href} className="gap-1.5">
+                  <Link href={link.href}>
                     <link.icon className="size-4" />
                     <span className="hidden sm:inline">{link.label}</span>
                   </Link>
