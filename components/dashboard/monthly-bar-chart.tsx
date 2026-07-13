@@ -73,7 +73,7 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
   const chartData = data.map((d, index) => ({
     month: d.month,
     income: d.income,
-    expense: -d.expense,
+    expense: d.expense,
     cumulative: data
       .slice(0, index + 1)
       .reduce((sum, m) => sum + m.income - m.expense, 0),
@@ -110,7 +110,7 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
               tickLine={false}
               axisLine={false}
               tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-              tickFormatter={(value) => compactCurrencyFormatter.format(Math.abs(value))}
+              tickFormatter={(value) => compactCurrencyFormatter.format(value)}
             />
             <YAxis
               yAxisId="right"
@@ -134,7 +134,7 @@ export function MonthlyBarChart({ data }: { data: MonthlyTotal[] }) {
               dataKey="expense"
               name="expense"
               fill="var(--destructive)"
-              radius={[0, 0, 3, 3]}
+              radius={[3, 3, 0, 0]}
             />
             <Line
               yAxisId="right"
