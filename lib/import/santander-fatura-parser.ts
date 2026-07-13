@@ -1,6 +1,8 @@
 import type { Category } from "@/lib/constants/categories";
 import type { ParsedRow } from "./santander-parser";
 
+const CARD_LABEL = "Cartão Santander";
+
 const START_MARKER = "Detalhamento da Fatura";
 const END_MARKER = "Resumo da Fatura";
 
@@ -212,7 +214,7 @@ export function parseSantanderFatura(rawText: string): ParsedRow[] {
 
     rows.push({
       date,
-      description,
+      description: `${CARD_LABEL} - ${description}`,
       amount: parsed.amount,
       type: "expense",
       category: guessCategory(parsed.description),
