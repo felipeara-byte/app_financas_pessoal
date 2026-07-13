@@ -42,9 +42,10 @@ export function DuplicatesClient({ groups }: { groups: DuplicateGroup[] }) {
           Verificar duplicatas
         </h1>
         <p className="text-sm text-muted-foreground">
-          Transações com a mesma data, descrição, valor e tipo — útil para
-          detectar uma importação confirmada duas vezes por engano. Mantenha
-          uma de cada grupo e exclua as demais.
+          Transações com a mesma data, valor e tipo (receita ou despesa) —
+          útil para detectar uma importação confirmada duas vezes por engano,
+          mesmo que a descrição esteja escrita de forma um pouco diferente.
+          Mantenha uma de cada grupo e exclua as demais.
         </p>
       </div>
 
@@ -65,8 +66,11 @@ export function DuplicatesClient({ groups }: { groups: DuplicateGroup[] }) {
                 {dateFormatter.format(
                   new Date(`${group.transactions[0].transaction_date}T00:00:00Z`)
                 )}{" "}
-                — {group.transactions[0].description} —{" "}
-                {currencyFormatter.format(group.transactions[0].amount)}
+                —{" "}
+                {currencyFormatter.format(group.transactions[0].amount)}{" "}
+                (
+                {group.transactions[0].type === "income" ? "receita" : "despesa"}
+                )
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -76,9 +80,14 @@ export function DuplicatesClient({ groups }: { groups: DuplicateGroup[] }) {
                     key={t.id}
                     className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
                   >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{t.category}</Badge>
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium text-foreground">
+                        {t.description}
+                      </span>
+                      <Badge variant="secondary" className="shrink-0">
+                        {t.category}
+                      </Badge>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         criado em{" "}
                         {new Date(t.created_at).toLocaleString("pt-BR")}
                       </span>
