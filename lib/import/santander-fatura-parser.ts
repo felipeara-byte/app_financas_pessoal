@@ -6,7 +6,6 @@ const CARD_LABEL = "Cartão Santander";
 const START_MARKER = "Detalhamento da Fatura";
 const END_MARKER = "Resumo da Fatura";
 
-const CLOSING_DATE_RE = /realizados\s+at[ée]\s+(\d{2})\/(\d{2})/i;
 const DUE_DATE_RE = /Vencimento\s*\n\s*(\d{2})\/(\d{2})\/(\d{4})/;
 
 const CREDITS_HEADER_RE = /^Pagamento e Demais Créditos$/i;
@@ -137,27 +136,21 @@ function parseLine(line: string): ParsedLine | null {
  * "PAGAMENTO CARTAO CREDITO" lump-sum lines on the checking-account statement
  * can be skipped in favor of each real underlying expense.
  *
- * "Despesas" rows are dated within the statement's own billing period, so
- * their printed day/month is used directly. "Parcelamentos" rows show the
- * *original* purchase date (which can be many cycles in the past and whose
- * year can't be reliably reconstructed from the parcela fraction alone), so
- * those are dated to this statement's own closing date instead -- that's
- * when this installment's amount actually hit the card this cycle -- while
- * the original purchase date is kept in the description for context.
+ * Every row is dated to the statement's own due date (Vencimento), not the
+ * day the purchase happened -- that's the date the checking account actually
+ * shows the money leaving, so monthly totals reconcile against the real bank
+ * statement instead of splitting a single payment across the months its
+ * underlying purchases occurred in. The original purchase day/month is kept
+ * in the description for context.
  */
 export function parseSantanderFatura(rawText: string): ParsedRow[] {
-  const closingMatch = rawText.match(CLOSING_DATE_RE);
   const dueMatch = rawText.match(DUE_DATE_RE);
-  if (!closingMatch || !dueMatch) {
+  if (!dueMatch) {
     throw new Error(
-      "Não foi possível identificar o período da fatura. O arquivo é uma fatura do cartão Santander?"
+      "Não foi possível identificar o vencimento da fatura. O arquivo é uma fatura do cartão Santander?"
     );
   }
-  const closingMonth = Number(closingMatch[2]);
-  const closingDay = closingMatch[1];
-  const dueMonth = Number(dueMatch[2]);
-  const dueYear = Number(dueMatch[3]);
-  const closingYear = closingMonth <= dueMonth ? dueYear : dueYear - 1;
+  const paymentDate = `${dueMatch[3]}-${dueMatch[2]}-${dueMatch[1]}`;
 
   const startIdx = rawText.indexOf(START_MARKER);
   const endIdx = rawText.indexOf(END_MARKER);
@@ -175,7 +168,7 @@ export function parseSantanderFatura(rawText: string): ParsedRow[] {
     .filter((l) => l.length > 0);
 
   const rows: ParsedRow[] = [];
-  let section: "credits" | "installment" | "expense" | null = null;
+  let section: "credits" | "purchases" | null = null;
 
   for (const line of lines) {
     if (CARDHOLDER_RE.test(line)) {
@@ -187,7 +180,7 @@ export function parseSantanderFatura(rawText: string): ParsedRow[] {
       continue;
     }
     if (PURCHASES_HEADER_RE.test(line)) {
-      section = /^Parcelamentos$/i.test(line) ? "installment" : "expense";
+      section = "purchases";
       continue;
     }
     if (COLUMN_HEADER_RE.test(line)) continue;
@@ -200,20 +193,12 @@ export function parseSantanderFatura(rawText: string): ParsedRow[] {
     const parsed = parseLine(line);
     if (!parsed) continue;
 
-    let date: string;
-    let description = parsed.description;
-    if (section === "installment") {
-      date = `${closingYear}-${String(closingMonth).padStart(2, "0")}-${closingDay}`;
-      description = parsed.parcela
-        ? `${description} (parcela ${parsed.parcela}, compra orig. ${parsed.day}/${parsed.month})`
-        : description;
-    } else {
-      const year = Number(parsed.month) <= closingMonth ? closingYear : closingYear - 1;
-      date = `${year}-${parsed.month}-${parsed.day}`;
-    }
+    const description = parsed.parcela
+      ? `${parsed.description} (parcela ${parsed.parcela}, compra orig. ${parsed.day}/${parsed.month})`
+      : `${parsed.description} (compra em ${parsed.day}/${parsed.month})`;
 
     rows.push({
-      date,
+      date: paymentDate,
       description: `${CARD_LABEL} - ${description}`,
       amount: parsed.amount,
       type: "expense",
