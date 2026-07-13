@@ -12,7 +12,7 @@ import { TopTransactionsCard } from "@/components/dashboard/top-transactions-car
 import { FixedVariableCard } from "@/components/dashboard/fixed-variable-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import type { Category } from "@/lib/constants/categories";
-import { buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
+import { ALL_CATEGORIES_VALUE, buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
 import {
   EXPENSE_CATEGORY_COLORS,
   INCOME_CATEGORY_COLORS,
@@ -26,6 +26,7 @@ interface DashboardPageProps {
     from_year?: string;
     to_month?: string;
     to_year?: string;
+    category?: string;
   }>;
 }
 
@@ -68,6 +69,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const fromYear = Number(params.from_year ?? currentYear);
   const toMonth = Number(params.to_month ?? currentMonth);
   const toYear = Number(params.to_year ?? currentYear);
+  const categoryParam = params.category ?? ALL_CATEGORIES_VALUE;
 
   const { dateFrom, dateTo } = buildMonthRange(fromMonth, fromYear, toMonth, toYear);
   const previous = getPreviousPeriod(fromMonth, fromYear, toMonth, toYear);
@@ -81,7 +83,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // Personal-finance data volume is small enough to fetch once and derive
   // every view (period, previous period, year chart, recurring detection)
   // in memory instead of round-tripping to the database per computation.
-  const allTransactions = await getFilteredTransactions(supabase, user.id, {});
+  const fetchedTransactions = await getFilteredTransactions(supabase, user.id, {});
+
+  const years = Array.from(
+    new Set(fetchedTransactions.map((t) => t.transaction_date.slice(0, 4)))
+  );
+  if (!years.includes(String(currentYear))) years.push(String(currentYear));
+  const yearOptions = years.sort();
+
+  const allTransactions =
+    categoryParam === ALL_CATEGORIES_VALUE
+      ? fetchedTransactions
+      : fetchedTransactions.filter((t) => t.category === categoryParam);
 
   const transactions = inRange(allTransactions, dateFrom, dateTo);
   const previousTransactions = inRange(
@@ -92,12 +105,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const yearTransactions = allTransactions.filter((t) =>
     t.transaction_date.startsWith(String(currentYear))
   );
-
-  const years = Array.from(
-    new Set(allTransactions.map((t) => t.transaction_date.slice(0, 4)))
-  );
-  if (!years.includes(String(currentYear))) years.push(String(currentYear));
-  const yearOptions = years.sort();
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -149,6 +156,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           fromYear: String(fromYear),
           toMonth: String(toMonth),
           toYear: String(toYear),
+          category: categoryParam,
         }}
         yearOptions={yearOptions}
       />

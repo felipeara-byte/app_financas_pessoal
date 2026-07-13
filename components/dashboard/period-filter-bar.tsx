@@ -10,16 +10,23 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { MONTH_OPTIONS } from "@/lib/constants/filters";
+import { ALL_CATEGORIES_VALUE, MONTH_OPTIONS } from "@/lib/constants/filters";
+import { CATEGORY_ITEMS } from "@/lib/constants/categories";
 
 export interface PeriodFilterValue {
   fromMonth: string;
   fromYear: string;
   toMonth: string;
   toYear: string;
+  category: string;
 }
 
 const MONTH_ITEMS = Object.fromEntries(MONTH_OPTIONS.map((m) => [m.value, m.label]));
+
+const CATEGORY_FILTER_ITEMS = {
+  [ALL_CATEGORIES_VALUE]: "Todas as categorias",
+  ...CATEGORY_ITEMS,
+};
 
 export function PeriodFilterBar({
   filters,
@@ -40,6 +47,7 @@ export function PeriodFilterBar({
       from_year: merged.fromYear,
       to_month: merged.toMonth,
       to_year: merged.toYear,
+      category: merged.category,
     });
     router.push(`${pathname}?${params.toString()}`);
   }
@@ -121,6 +129,29 @@ export function PeriodFilterBar({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs text-muted-foreground">Categoria</Label>
+          <Select
+            items={CATEGORY_FILTER_ITEMS}
+            value={filters.category}
+            onValueChange={(value) => updateParams({ category: value as string })}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CATEGORIES_VALUE}>
+                Todas as categorias
+              </SelectItem>
+              {Object.keys(CATEGORY_ITEMS).map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>
