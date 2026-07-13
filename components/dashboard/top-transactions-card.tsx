@@ -11,23 +11,32 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 export function TopTransactionsCard({
   transactions,
+  type,
   limit = 5,
 }: {
   transactions: Transaction[];
+  type: "income" | "expense";
   limit?: number;
 }) {
-  const top = [...transactions].sort((a, b) => b.amount - a.amount).slice(0, limit);
+  const top = [...transactions]
+    .filter((t) => t.type === type)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, limit);
+
+  const title = type === "expense" ? "Maiores despesas" : "Maiores receitas";
+  const emptyMessage =
+    type === "expense"
+      ? "Nenhuma despesa registrada neste período."
+      : "Nenhuma receita registrada neste período.";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Maiores transações do período</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {top.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma transação registrada neste período.
-          </p>
+          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {top.map((t) => (

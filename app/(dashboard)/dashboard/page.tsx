@@ -9,7 +9,6 @@ import {
 } from "@/components/dashboard/category-pie-chart";
 import { MonthlyBarChart, type MonthlyTotal } from "@/components/dashboard/monthly-bar-chart";
 import { TopTransactionsCard } from "@/components/dashboard/top-transactions-card";
-import { FixedVariableCard } from "@/components/dashboard/fixed-variable-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import type { Category } from "@/lib/constants/categories";
 import { ALL_CATEGORIES_VALUE, buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
@@ -18,7 +17,7 @@ import {
   INCOME_CATEGORY_COLORS,
 } from "@/lib/constants/category-colors";
 import type { Transaction } from "@/lib/types";
-import { detectRecurringDescriptions, getPreviousPeriod, isRecurringExpense } from "@/lib/dashboard/insights";
+import { getPreviousPeriod } from "@/lib/dashboard/insights";
 
 interface DashboardPageProps {
   searchParams: Promise<{
@@ -123,13 +122,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const expenseBreakdown = categoryBreakdown(transactions, "expense");
   const incomeBreakdown = categoryBreakdown(transactions, "income");
 
-  const recurringDescriptions = detectRecurringDescriptions(allTransactions);
-  const expenseTransactions = transactions.filter((t) => t.type === "expense");
-  const fixedTotal = expenseTransactions
-    .filter((t) => isRecurringExpense(t, recurringDescriptions))
-    .reduce((sum, t) => sum + t.amount, 0);
-  const variableTotal = totalExpense - fixedTotal;
-
   const monthlyTotals: MonthlyTotal[] = MONTH_OPTIONS.map((month) => {
     const monthNumber = Number(month.value);
     const monthTransactions = yearTransactions.filter(
@@ -197,8 +189,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <TopTransactionsCard transactions={transactions} />
-        <FixedVariableCard fixedTotal={fixedTotal} variableTotal={variableTotal} />
+        <TopTransactionsCard transactions={transactions} type="expense" />
+        <TopTransactionsCard transactions={transactions} type="income" />
       </div>
 
       <Card>
