@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants/categories";
 import type { Transaction } from "@/lib/types";
-import { deleteTransaction } from "@/app/(dashboard)/transactions/actions";
+import { deleteTransaction, deleteTransactions } from "@/app/(dashboard)/transactions/actions";
 import { TransactionForm } from "./transaction-form";
 import { FilterBar, type TransactionFiltersValue } from "./filter-bar";
 import { ExportCsvButton } from "./export-csv-button";
@@ -57,6 +58,10 @@ export function TransactionsClient({
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
   function openCreateDialog() {
     setEditing(null);
     setFormOpen(true);
@@ -77,6 +82,43 @@ export function TransactionsClient({
     });
   }
 
+  function toggleSelecting() {
+    setIsSelecting((prev) => !prev);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelected(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedIds(new Set(transactions.map((t) => t.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function confirmBulkDelete() {
+    const ids = Array.from(selectedIds);
+    setBulkDeleteOpen(false);
+    startTransition(async () => {
+      await deleteTransactions(ids);
+      toast.success(
+        ids.length === 1
+          ? "1 transação excluída."
+          : `${ids.length} transações excluídas.`
+      );
+      setIsSelecting(false);
+      setSelectedIds(new Set());
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -93,11 +135,40 @@ export function TransactionsClient({
             render={<Link href="/transactions/duplicates">Verificar duplicatas</Link>}
           />
           <ExportCsvButton transactions={transactions} />
+          <Button variant="outline" onClick={toggleSelecting}>
+            {isSelecting ? "Cancelar seleção" : "Excluir transações"}
+          </Button>
           <Button onClick={openCreateDialog}>Nova transação</Button>
         </div>
       </div>
 
       <FilterBar filters={filters} />
+
+      {isSelecting && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <span className="text-sm text-muted-foreground">
+              {selectedIds.size} de {transactions.length} selecionadas
+            </span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={selectAllVisible}>
+                Selecionar todas
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                Nenhuma
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={selectedIds.size === 0 || isPending}
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                Excluir selecionadas
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -149,6 +220,30 @@ export function TransactionsClient({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir {selectedIds.size}{" "}
+              {selectedIds.size === 1 ? "transação" : "transações"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={confirmBulkDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card>
         <CardHeader>
           <CardTitle>Todas as transações</CardTitle>
@@ -162,6 +257,7 @@ export function TransactionsClient({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isSelecting && <TableHead className="w-8"></TableHead>}
                   <TableHead>Data</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Categoria</TableHead>
@@ -173,6 +269,16 @@ export function TransactionsClient({
               <TableBody>
                 {transactions.map((transaction) => (
                   <TableRow key={transaction.id}>
+                    {isSelecting && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(transaction.id)}
+                          onCheckedChange={(checked) =>
+                            toggleSelected(transaction.id, checked)
+                          }
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-nowrap">
                       {dateFormatter.format(
                         new Date(`${transaction.transaction_date}T00:00:00Z`)

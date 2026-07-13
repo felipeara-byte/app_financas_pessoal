@@ -46,7 +46,10 @@ export function FilterBar({ filters }: { filters: TransactionFiltersValue }) {
   const yearItems = Object.fromEntries(yearOptions.map((y) => [y, y]));
 
   function updateParams(next: Partial<TransactionFiltersValue>) {
-    const merged = { ...filters, ...next, search };
+    // `search` (local state) is a fallback for calls that only change
+    // month/year/category -- it must come before `next` so an explicit
+    // `next.search` (from the search box itself) isn't clobbered by it.
+    const merged = { ...filters, search, ...next };
     const params = new URLSearchParams();
     if (merged.month === ALL_MONTHS_VALUE) {
       params.set("month", ALL_MONTHS_VALUE);
