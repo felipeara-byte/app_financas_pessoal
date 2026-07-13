@@ -6,6 +6,19 @@ import { createClient } from "@/lib/supabase/server";
 import { transactionSchema } from "@/lib/validations/transaction";
 import { extractPdfText } from "@/lib/import/pdf-text";
 import { parseSantanderStatement, type ParsedRow } from "@/lib/import/santander-parser";
+import { parseSantanderFatura } from "@/lib/import/santander-fatura-parser";
+
+function parseStatementText(text: string): ParsedRow[] {
+  if (text.includes("Detalhamento da Fatura")) {
+    return parseSantanderFatura(text);
+  }
+  if (text.includes("EXTRATO CONSOLIDADO INTELIGENTE")) {
+    return parseSantanderStatement(text);
+  }
+  throw new Error(
+    "Formato não reconhecido. Envie um extrato ou uma fatura do cartão do Santander."
+  );
+}
 
 export interface ImportRow extends ParsedRow {
   id: string;
@@ -29,7 +42,7 @@ export async function parseStatementFiles(
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
       const text = await extractPdfText(buffer);
-      const parsed = parseSantanderStatement(text);
+      const parsed = parseStatementText(text);
 
       if (parsed.length === 0) {
         errors.push(`${file.name}: nenhuma transação encontrada.`);

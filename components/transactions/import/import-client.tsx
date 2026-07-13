@@ -120,15 +120,20 @@ export function ImportClient() {
           Importar extrato bancário
         </h1>
         <p className="text-sm text-muted-foreground">
-          Envie um ou mais extratos em PDF do Santander. As transações são
-          extraídas automaticamente — revise e ajuste antes de confirmar.
+          Envie um ou mais extratos e/ou faturas de cartão em PDF do Santander.
+          As transações são extraídas automaticamente — revise e ajuste antes
+          de confirmar. Ao importar uma fatura, cada compra do cartão entra
+          detalhada por categoria; por isso a linha de pagamento do cartão no
+          extrato da conta já vem desmarcada, para não contar em dobro.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>1. Selecionar arquivos</CardTitle>
-          <CardDescription>Formato aceito: PDF do extrato Santander.</CardDescription>
+          <CardDescription>
+            Formatos aceitos: extrato ou fatura do cartão em PDF do Santander.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <input

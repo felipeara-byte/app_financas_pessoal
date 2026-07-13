@@ -196,6 +196,11 @@ export function parseSantanderStatement(rawText: string): ParsedRow[] {
       const type: "income" | "expense" = tailMatch[3] === "-" ? "expense" : "income";
       const amount = parseAmount(tailMatch[2]);
       const isInterest = /REMUNERACAO APLICACAO/i.test(description);
+      // Default-unchecked: this is the lump-sum card bill payment, meant to be
+      // superseded by importing the credit card statement's itemized
+      // purchases instead (see santander-fatura-parser.ts) so spending stays
+      // visible by category instead of collapsing into one "card payment" line.
+      const isCardBillPayment = /PAGAMENTO CARTAO CREDITO/i.test(description);
 
       rows.push({
         date: `${year}-${month}-${activeDay}`,
@@ -203,7 +208,7 @@ export function parseSantanderStatement(rawText: string): ParsedRow[] {
         amount,
         type,
         category: guessCategory(description, type),
-        selected: !isInterest,
+        selected: !isInterest && !isCardBillPayment,
       });
     } else {
       buffer.push(line);

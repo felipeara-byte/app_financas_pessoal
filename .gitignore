@@ -40,6 +40,9 @@ yarn-error.log*
 # personal/local-only SQL scripts (may contain real emails/data)
 *.local.sql
 
+# real personal bank/card statements dropped in for parser development
+/extrato/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
