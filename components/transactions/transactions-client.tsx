@@ -87,6 +87,11 @@ export function TransactionsClient({
             nativeButton={false}
             render={<Link href="/transactions/import">Importar extrato</Link>}
           />
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/transactions/duplicates">Verificar duplicatas</Link>}
+          />
           <ExportCsvButton transactions={transactions} />
           <Button onClick={openCreateDialog}>Nova transação</Button>
         </div>
