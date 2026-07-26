@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getFilteredTransactions } from "@/lib/supabase/queries";
+import { getCategories } from "@/lib/supabase/categories";
 import { TransactionsClient } from "@/components/transactions/transactions-client";
-import type { Category } from "@/lib/constants/categories";
 import { ALL_CATEGORIES_VALUE, ALL_MONTHS_VALUE } from "@/lib/constants/filters";
 
 interface TransactionsPageProps {
@@ -36,19 +36,21 @@ export default async function TransactionsPage({
 
   const isAllMonths = monthParam === ALL_MONTHS_VALUE;
 
-  const transactions = await getFilteredTransactions(supabase, user.id, {
-    month: isAllMonths ? undefined : Number(monthParam),
-    year: isAllMonths ? undefined : Number(yearParam),
-    category:
-      categoryParam === ALL_CATEGORIES_VALUE
-        ? undefined
-        : (categoryParam as Category),
-    search: searchParam || undefined,
-  });
+  const [transactions, categories] = await Promise.all([
+    getFilteredTransactions(supabase, user.id, {
+      month: isAllMonths ? undefined : Number(monthParam),
+      year: isAllMonths ? undefined : Number(yearParam),
+      category:
+        categoryParam === ALL_CATEGORIES_VALUE ? undefined : categoryParam,
+      search: searchParam || undefined,
+    }),
+    getCategories(supabase, user.id),
+  ]);
 
   return (
     <TransactionsClient
       transactions={transactions}
+      categories={categories}
       filters={{
         month: monthParam,
         year: yearParam,

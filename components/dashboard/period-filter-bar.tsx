@@ -11,7 +11,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { ALL_CATEGORIES_VALUE, MONTH_OPTIONS } from "@/lib/constants/filters";
-import { CATEGORY_ITEMS } from "@/lib/constants/categories";
 
 export interface PeriodFilterValue {
   fromMonth: string;
@@ -23,22 +22,23 @@ export interface PeriodFilterValue {
 
 const MONTH_ITEMS = Object.fromEntries(MONTH_OPTIONS.map((m) => [m.value, m.label]));
 
-const CATEGORY_FILTER_ITEMS = {
-  [ALL_CATEGORIES_VALUE]: "Todas as categorias",
-  ...CATEGORY_ITEMS,
-};
-
 export function PeriodFilterBar({
   filters,
   yearOptions,
+  categoryNames,
 }: {
   filters: PeriodFilterValue;
   yearOptions: string[];
+  categoryNames: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
   const yearItems = Object.fromEntries(yearOptions.map((y) => [y, y]));
+  const categoryFilterItems = {
+    [ALL_CATEGORIES_VALUE]: "Todas as categorias",
+    ...Object.fromEntries(categoryNames.map((name) => [name, name])),
+  };
 
   function updateParams(next: Partial<PeriodFilterValue>) {
     const merged = { ...filters, ...next };
@@ -134,7 +134,7 @@ export function PeriodFilterBar({
         <div className="flex flex-col gap-2">
           <Label className="text-xs text-muted-foreground">Categoria</Label>
           <Select
-            items={CATEGORY_FILTER_ITEMS}
+            items={categoryFilterItems}
             value={filters.category}
             onValueChange={(value) => updateParams({ category: value as string })}
           >
@@ -145,7 +145,7 @@ export function PeriodFilterBar({
               <SelectItem value={ALL_CATEGORIES_VALUE}>
                 Todas as categorias
               </SelectItem>
-              {Object.keys(CATEGORY_ITEMS).map((category) => (
+              {categoryNames.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}
                 </SelectItem>

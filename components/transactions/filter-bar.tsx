@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { CATEGORY_ITEMS } from "@/lib/constants/categories";
 import {
   ALL_CATEGORIES_VALUE,
   ALL_MONTHS_VALUE,
@@ -31,12 +30,18 @@ const MONTH_ITEMS = Object.fromEntries([
   ...MONTH_OPTIONS.map((m) => [m.value, m.label]),
 ]);
 
-const CATEGORY_FILTER_ITEMS = {
-  [ALL_CATEGORIES_VALUE]: "Todas as categorias",
-  ...CATEGORY_ITEMS,
-};
+export function FilterBar({
+  filters,
+  categoryNames,
+}: {
+  filters: TransactionFiltersValue;
+  categoryNames: string[];
+}) {
+  const categoryFilterItems = {
+    [ALL_CATEGORIES_VALUE]: "Todas as categorias",
+    ...Object.fromEntries(categoryNames.map((name) => [name, name])),
+  };
 
-export function FilterBar({ filters }: { filters: TransactionFiltersValue }) {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState(filters.search);
@@ -113,7 +118,7 @@ export function FilterBar({ filters }: { filters: TransactionFiltersValue }) {
         )}
 
         <Select
-          items={CATEGORY_FILTER_ITEMS}
+          items={categoryFilterItems}
           value={filters.category}
           onValueChange={(value) => updateParams({ category: value as string })}
         >
@@ -124,7 +129,7 @@ export function FilterBar({ filters }: { filters: TransactionFiltersValue }) {
             <SelectItem value={ALL_CATEGORIES_VALUE}>
               Todas as categorias
             </SelectItem>
-            {Object.keys(CATEGORY_ITEMS).map((category) => (
+            {categoryNames.map((category) => (
               <SelectItem key={category} value={category}>
                 {category}
               </SelectItem>

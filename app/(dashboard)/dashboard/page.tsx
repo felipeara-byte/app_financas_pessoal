@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getFilteredTransactions } from "@/lib/supabase/queries";
+import { getCategories, splitByType } from "@/lib/supabase/categories";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { PeriodFilterBar } from "@/components/dashboard/period-filter-bar";
 import {
@@ -10,12 +11,8 @@ import {
 import { MonthlyBarChart, type MonthlyTotal } from "@/components/dashboard/monthly-bar-chart";
 import { TopTransactionsCard } from "@/components/dashboard/top-transactions-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import type { Category } from "@/lib/constants/categories";
 import { ALL_CATEGORIES_VALUE, buildMonthRange, MONTH_OPTIONS } from "@/lib/constants/filters";
-import {
-  EXPENSE_CATEGORY_COLORS,
-  INCOME_CATEGORY_COLORS,
-} from "@/lib/constants/category-colors";
+import { colorMap } from "@/lib/constants/category-colors";
 import type { Transaction } from "@/lib/types";
 import { getPreviousPeriod } from "@/lib/dashboard/insights";
 
@@ -33,7 +30,7 @@ function categoryBreakdown(
   transactions: Transaction[],
   type: "income" | "expense"
 ): CategoryBreakdownItem[] {
-  const totals = new Map<Category, number>();
+  const totals = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== type) continue;
     totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
@@ -82,7 +79,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // Personal-finance data volume is small enough to fetch once and derive
   // every view (period, previous period, year chart, recurring detection)
   // in memory instead of round-tripping to the database per computation.
-  const fetchedTransactions = await getFilteredTransactions(supabase, user.id, {});
+  const [fetchedTransactions, categories] = await Promise.all([
+    getFilteredTransactions(supabase, user.id, {}),
+    getCategories(supabase, user.id),
+  ]);
+
+  const { income: incomeCategories, expense: expenseCategories } =
+    splitByType(categories);
+  const expenseColors = colorMap(expenseCategories);
+  const incomeColors = colorMap(incomeCategories);
+  const categoryNames = Array.from(
+    new Set(categories.map((c) => c.name))
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const years = Array.from(
     new Set(fetchedTransactions.map((t) => t.transaction_date.slice(0, 4)))
@@ -151,6 +159,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           category: categoryParam,
         }}
         yearOptions={yearOptions}
+        categoryNames={categoryNames}
       />
 
       <SummaryCards
@@ -168,7 +177,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardContent>
             <CategoryPieChart
               data={expenseBreakdown}
-              colors={EXPENSE_CATEGORY_COLORS}
+              colors={expenseColors}
               emptyMessage="Nenhuma despesa registrada neste período."
             />
           </CardContent>
@@ -181,7 +190,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardContent>
             <CategoryPieChart
               data={incomeBreakdown}
-              colors={INCOME_CATEGORY_COLORS}
+              colors={incomeColors}
               emptyMessage="Nenhuma receita registrada neste período."
             />
           </CardContent>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/constants/categories";
+import { TRANSACTION_TYPES } from "@/lib/constants/categories";
 
 export const transactionSchema = z.object({
   description: z
@@ -14,7 +14,13 @@ export const transactionSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe uma data válida."),
   type: z.enum(TRANSACTION_TYPES, { message: "Selecione o tipo." }),
-  category: z.enum(CATEGORIES, { message: "Selecione uma categoria." }),
+  // Categories are user-defined, so this is a free-form (but bounded) string
+  // rather than a fixed enum.
+  category: z
+    .string()
+    .trim()
+    .min(1, "Selecione uma categoria.")
+    .max(40, "A categoria pode ter no máximo 40 caracteres."),
 });
 
 export type TransactionInput = z.infer<typeof transactionSchema>;

@@ -24,12 +24,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  CATEGORY_ITEMS,
   TRANSACTION_TYPES,
   TRANSACTION_TYPE_LABELS,
-  type Category,
   type TransactionType,
 } from "@/lib/constants/categories";
+import type { CategoryRecord } from "@/lib/types";
 import {
   parseStatementFiles,
   importTransactions,
@@ -41,7 +40,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export function ImportClient() {
+export function ImportClient({ categories }: { categories: CategoryRecord[] }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
@@ -201,7 +200,14 @@ export function ImportClient() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
+                {rows.map((row) => {
+                  const rowCategories = categories.filter(
+                    (c) => c.type === row.type
+                  );
+                  const categoryItems = Object.fromEntries(
+                    rowCategories.map((c) => [c.name, c.name])
+                  );
+                  return (
                   <TableRow key={row.id} className={row.selected ? "" : "opacity-50"}>
                     <TableCell>
                       <Checkbox
@@ -231,19 +237,19 @@ export function ImportClient() {
                     </TableCell>
                     <TableCell>
                       <Select
-                        items={CATEGORY_ITEMS}
+                        items={categoryItems}
                         value={row.category}
                         onValueChange={(value) =>
-                          updateRow(row.id, { category: value as Category })
+                          updateRow(row.id, { category: value as string })
                         }
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.keys(CATEGORY_ITEMS).map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                          {rowCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -253,9 +259,23 @@ export function ImportClient() {
                       <Select
                         items={TRANSACTION_TYPE_LABELS}
                         value={row.type}
-                        onValueChange={(value) =>
-                          updateRow(row.id, { type: value as TransactionType })
-                        }
+                        onValueChange={(value) => {
+                          const nextType = value as TransactionType;
+                          const stillValid = categories.some(
+                            (c) =>
+                              c.type === nextType && c.name === row.category
+                          );
+                          updateRow(row.id, {
+                            type: nextType,
+                            ...(stillValid
+                              ? {}
+                              : {
+                                  category:
+                                    categories.find((c) => c.type === nextType)
+                                      ?.name ?? row.category,
+                                }),
+                          });
+                        }}
                       >
                         <SelectTrigger className="w-28">
                           <SelectValue />
@@ -282,7 +302,8 @@ export function ImportClient() {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>

@@ -1,24 +1,28 @@
-import type { Category } from "@/lib/constants/categories";
+// The validated chart color slots defined in app/globals.css. New categories
+// are auto-assigned a color from this palette.
+export const CHART_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
+] as const;
 
-// Fixed categorical order (never re-sorted by data) mapped to the app's
-// validated chart color slots defined in app/globals.css.
-export const EXPENSE_CATEGORY_COLORS: Partial<Record<Category, string>> = {
-  Alimentação: "var(--chart-1)",
-  Transporte: "var(--chart-2)",
-  Moradia: "var(--chart-3)",
-  Lazer: "var(--chart-4)",
-  Saúde: "var(--chart-5)",
-  Educação: "var(--chart-6)",
-  Outros: "var(--chart-7)",
-};
+/**
+ * Picks the next palette color not already used within a type. Once every slot
+ * is taken it cycles back around, so there's always a color to assign.
+ */
+export function nextCategoryColor(usedColors: string[]): string {
+  const free = CHART_PALETTE.find((color) => !usedColors.includes(color));
+  return free ?? CHART_PALETTE[usedColors.length % CHART_PALETTE.length];
+}
 
-// Income only ever shows a handful of categories (Salário/Freelance/Outros),
-// so this reuses the same validated palette from a different subset of
-// slots -- it's never rendered in the same legend as the expense chart,
-// except "Outros", which is kept on the same slot (chart-7) in both so the
-// one category shared between the two charts stays visually consistent.
-export const INCOME_CATEGORY_COLORS: Partial<Record<Category, string>> = {
-  Salário: "var(--chart-8)",
-  Freelance: "var(--chart-1)",
-  Outros: "var(--chart-7)",
-};
+/** Builds a category-name -> color lookup for charts of a single type. */
+export function colorMap(
+  categories: { name: string; color: string }[]
+): Record<string, string> {
+  return Object.fromEntries(categories.map((c) => [c.name, c.color]));
+}

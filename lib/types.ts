@@ -11,3 +11,12 @@ export interface Transaction {
   created_at: string;
   updated_at: string;
 }
+
+export interface CategoryRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  type: TransactionType;
+  color: string;
+  created_at: string;
+}

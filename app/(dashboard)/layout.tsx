@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Wallet, LayoutDashboard, ListChecks, LogOut } from "lucide-react";
+import { Wallet, LayoutDashboard, ListChecks, Tags, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
@@ -8,6 +8,7 @@ import { logout } from "./actions";
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transações", icon: ListChecks },
+  { href: "/categories", label: "Categorias", icon: Tags },
 ];
 
 export default async function DashboardLayout({

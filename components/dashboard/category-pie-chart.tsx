@@ -3,10 +3,9 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
-import type { Category } from "@/lib/constants/categories";
 
 export interface CategoryBreakdownItem {
-  category: Category;
+  category: string;
   total: number;
 }
 
@@ -34,12 +33,12 @@ export function CategoryPieChart({
   emptyMessage = "Nenhum dado registrado neste período.",
 }: {
   data: CategoryBreakdownItem[];
-  colors: Partial<Record<Category, string>>;
+  colors: Record<string, string>;
   emptyMessage?: string;
 }) {
   const total = data.reduce((sum, entry) => sum + entry.total, 0);
 
-  function categoryColor(category: Category) {
+  function categoryColor(category: string) {
     return colors[category] ?? "var(--muted-foreground)";
   }
 

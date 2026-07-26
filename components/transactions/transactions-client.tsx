@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants/categories";
-import type { Transaction } from "@/lib/types";
+import type { CategoryRecord, Transaction } from "@/lib/types";
 import { deleteTransaction, deleteTransactions } from "@/app/(dashboard)/transactions/actions";
 import { TransactionForm } from "./transaction-form";
 import { FilterBar, type TransactionFiltersValue } from "./filter-bar";
@@ -48,11 +48,17 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 export function TransactionsClient({
   transactions,
+  categories,
   filters,
 }: {
   transactions: Transaction[];
+  categories: CategoryRecord[];
   filters: TransactionFiltersValue;
 }) {
+  const categoryNames = Array.from(
+    new Set(categories.map((c) => c.name))
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
@@ -142,7 +148,7 @@ export function TransactionsClient({
         </div>
       </div>
 
-      <FilterBar filters={filters} />
+      <FilterBar filters={filters} categoryNames={categoryNames} />
 
       {isSelecting && (
         <Card>
@@ -184,6 +190,7 @@ export function TransactionsClient({
           </DialogHeader>
           <TransactionForm
             transaction={editing}
+            categories={categories}
             onDone={() => setFormOpen(false)}
             onCancel={() => setFormOpen(false)}
           />
