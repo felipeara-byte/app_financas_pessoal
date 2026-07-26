@@ -29,11 +29,19 @@ const MONTHS: Record<string, string> = {
 
 const MONTH_ALT = Object.keys(MONTHS).join("|");
 
-// <DD> <MMM> <middle> [−|-]R$ <amount>
+// <DD> <MMM> <middle> [−|-]R$ <amount>  (single-line transaction)
 // `middle` holds an optional card mask (•••• 5088) plus the description.
 const TX_RE = new RegExp(
   `^(\\d{2})\\s+(${MONTH_ALT})\\s+(.*?)\\s+(−|-)?R\\$\\s*([\\d.]+,\\d{2})$`
 );
+
+// A line that starts with a date but carries no trailing amount -- the opening
+// line of a multi-line entry (e.g. long refunds), whose amount lands on a later
+// line by itself.
+const DATE_LINE_RE = new RegExp(`^(\\d{2})\\s+(${MONTH_ALT})\\s+(.*\\S)$`);
+
+// A line that is nothing but an amount, e.g. "−R$ 59,90".
+const AMOUNT_ONLY_RE = /^(−|-)?R\$\s*([\d.]+,\d{2})$/;
 
 // Leading card mask like "•••• 5088 ": a run of symbol chars, then 4 digits.
 // Anchored on the symbol run so descriptions that merely start with a digit
@@ -158,13 +166,15 @@ export function parseNubankFatura(rawText: string): ParsedRow[] {
 
   const rows: ParsedRow[] = [];
 
-  for (const line of lines) {
-    const match = line.match(TX_RE);
-    if (!match) continue;
-
-    const [, day, monthAbbr, middleRaw, sign, amountStr] = match;
+  function pushRow(
+    day: string,
+    monthAbbr: string,
+    middleRaw: string,
+    sign: string | undefined,
+    amountStr: string
+  ): void {
     const amount = parseAmount(amountStr);
-    if (amount <= 0) continue;
+    if (amount <= 0) return;
 
     const isRefund = sign === "−" || sign === "-";
     const monthNum = MONTHS[monthAbbr];
@@ -190,6 +200,35 @@ export function parseNubankFatura(rawText: string): ParsedRow[] {
       category: guessCategory(middle),
       selected: true,
     });
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Single-line transaction: date, description and amount all together.
+    const single = line.match(TX_RE);
+    if (single) {
+      const [, day, monthAbbr, middleRaw, sign, amountStr] = single;
+      pushRow(day, monthAbbr, middleRaw, sign, amountStr);
+      continue;
+    }
+
+    // Multi-line entry: a date line whose amount is on a following line, with
+    // optional explanation lines in between (e.g. detailed refunds). Look ahead
+    // for the first standalone amount, stopping if another entry starts first.
+    const dateLine = line.match(DATE_LINE_RE);
+    if (dateLine) {
+      const [, day, monthAbbr, middleRaw] = dateLine;
+      for (let j = i + 1; j < lines.length && j <= i + 5; j++) {
+        const amountOnly = lines[j].match(AMOUNT_ONLY_RE);
+        if (amountOnly) {
+          pushRow(day, monthAbbr, middleRaw, amountOnly[1], amountOnly[2]);
+          i = j;
+          break;
+        }
+        if (TX_RE.test(lines[j]) || DATE_LINE_RE.test(lines[j])) break;
+      }
+    }
   }
 
   return rows;
