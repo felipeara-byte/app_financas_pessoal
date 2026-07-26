@@ -7,8 +7,12 @@ import { transactionSchema } from "@/lib/validations/transaction";
 import { extractPdfText } from "@/lib/import/pdf-text";
 import { parseSantanderStatement, type ParsedRow } from "@/lib/import/santander-parser";
 import { parseSantanderFatura } from "@/lib/import/santander-fatura-parser";
+import { parseNubankFatura } from "@/lib/import/nubank-fatura-parser";
 
 function parseStatementText(text: string): ParsedRow[] {
+  if (text.includes("Nu Pagamentos S.A.") && text.includes("TRANSAÇÕES DE")) {
+    return parseNubankFatura(text);
+  }
   if (text.includes("Detalhamento da Fatura")) {
     return parseSantanderFatura(text);
   }
@@ -16,7 +20,7 @@ function parseStatementText(text: string): ParsedRow[] {
     return parseSantanderStatement(text);
   }
   throw new Error(
-    "Formato não reconhecido. Envie um extrato ou uma fatura do cartão do Santander."
+    "Formato não reconhecido. Envie um extrato ou fatura do Santander, ou uma fatura do cartão Nubank."
   );
 }
 

@@ -119,11 +119,12 @@ export function ImportClient({ categories }: { categories: CategoryRecord[] }) {
           Importar extrato bancário
         </h1>
         <p className="text-sm text-muted-foreground">
-          Envie um ou mais extratos e/ou faturas de cartão em PDF do Santander.
-          As transações são extraídas automaticamente — revise e ajuste antes
-          de confirmar. Ao importar uma fatura, cada compra do cartão entra
-          detalhada por categoria; por isso a linha de pagamento do cartão no
-          extrato da conta já vem desmarcada, para não contar em dobro.
+          Envie um ou mais extratos e/ou faturas de cartão em PDF do Santander,
+          ou faturas do cartão Nubank. As transações são extraídas
+          automaticamente — revise e ajuste antes de confirmar. Ao importar uma
+          fatura, cada compra do cartão entra detalhada por categoria; por isso a
+          linha de pagamento do cartão no extrato da conta já vem desmarcada,
+          para não contar em dobro.
         </p>
       </div>
 
@@ -131,7 +132,8 @@ export function ImportClient({ categories }: { categories: CategoryRecord[] }) {
         <CardHeader>
           <CardTitle>1. Selecionar arquivos</CardTitle>
           <CardDescription>
-            Formatos aceitos: extrato ou fatura do cartão em PDF do Santander.
+            Formatos aceitos: extrato ou fatura do cartão Santander, e fatura do
+            cartão Nubank (PDF).
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
